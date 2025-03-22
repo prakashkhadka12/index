@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bird Shooter Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            display: none;
+        }
+        #playButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            padding: 20px 40px;
+            background: linear-gradient(135deg, #6d5dfc, #46aef7);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        #playButton:hover {
+            background: linear-gradient(135deg, #5643f0, #3685d9);
+        }
+        #gameOverScreen {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 28px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+        }
+        #gameOverScreen button {
+            margin-top: 20px;
+            font-size: 18px;
+            padding: 10px 20px;
+            background: #ff5733;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        #gameOverScreen button:hover {
+            background: #e44e2d;
+        }
+        #gameStats {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px;
+            border-radius: 12px;
+            display: none;
+        }
+        #gameStats p {
+            margin: 5px 0;
+        }
+        #welcomeText {
+            background-color: #5643f0;
+            color: black;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 28px;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="welcomeText">Welcome to the Bird Shooter</h1>
+    
+    <button id="playButton">Play</button>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameOverScreen">
+        <p>Game Over!</p>
+        <p id="finalScore">Final Score: 0</p>
+        <p id="finalLevel">Level: 1</p>
+        <p id="earnedCoins">Coins Earned: 50</p>
+        
+        <!-- AdSense Ad -->
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-app-pub-6250750088953414"
+             data-ad-slot="1550772859"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+
+        <button onclick="goHome()">Home</button>
+        <button onclick="nextLevel()">Next Level</button>
+    </div>
+    <div id="gameStats">
+        <p id="score">Score: 0</p>
+        <p id="ammo">Ammo: 200</p>
+        <p id="level">Level: 1</p>
+        <p id="timer">Time: 60</p>
+    </div>
+    <script>
+        const playButton = document.getElementById("playButton");
+        const gameCanvas = document.getElementById("gameCanvas");
+        const ctx = gameCanvas.getContext("2d");
+        const gameStats = document.getElementById("gameStats");
+        const gameOverScreen = document.getElementById("gameOverScreen");
+        const finalScore = document.getElementById("finalScore");
+        const finalLevel = document.getElementById("finalLevel");
+        const earnedCoins = document.getElementById("earnedCoins");
+
+        let score = 0;
+        let ammo = 200;
+        let level = 1;
+        let timeLeft = 60;
+        let bird = { x: 0, y: 0, size: 50, speed: 3 };
+        let birdImage = new Image();
+        let backgroundImage = new Image();
+        let timerInterval;
+
+        backgroundImage.src = "https://media-hosting.imagekit.io//1f3ef1907f174913/backgroundimg.jpg?Expires=1837043029&Key-Pair-Id=K2ZIVPTIP2VGHC&Signature=h5G0kTcYAGMU6S3-bczdcO8PN1iNJ2Am~Z9D8Y6Q-3FwApLRxQrtZ~il39C7zWncd5IOlFK82r6s~rviCv3OGFg8L-pYzE3eTs9q41RtuxDeblXeqG5m5m5SqARp8pgtlRMGEtu9o5iMwUrc~Ouw~HXqq7g2f505T7JaWK3SfoOpgf3Ctap-MQDXsIu3w6hbfSJfWrJIbtV0Y7PFAMhx0guttHLuFpRygZLzY~8NllkZISxx1Bp~muRPTt1uDkn1AYFB4zK-WZhv55Qp~vJqyf3qOLGSRUtmSGLsYpo9Lb5jFKzHLpc6~Q9b5abPwYu1HkZ1Xx~SbqjtJA5ViJMMmg__";
+        birdImage.src = "https://media-hosting.imagekit.io//51de53db0f1949c5/bird.jpg?Expires=1837042676&Key-Pair-Id=K2ZIVPTIP2VGHC&Signature=AutGVU7UHwwe3qAPFn3EE8EdKlyVWDfX0ueKHNdlfIl7W5v9NEcSXPvqew9dapLXqIEnUShC-DL8N2x4Lm-HoTBCN0B5RWPH~a2p0~z6wViHN~cxyLnLIEn-5nrMXLkpX0ta6V4b4rEstPRFXFdv4P11XMAp9Q0TAVJZLL-~b0ejNkKLpkLJ-nIZKnY7XXt28Lo283HR4GpBMMFaRLdsmQYVE7DDzZEp-Nw9WrXYFvZ4qK-Jwx6IcZDGcLZvTNQmVIzcp2xtwnPL7U-tdHeFSKSZLdBZoiTs77RN-~TqwHphqHfohC9YuhbNralFsPixZo8gNdDeEdjpNYXKgYebbg__";
+
+        playButton.addEventListener("click", startGame);
+
+        function startGame() {
+            playButton.style.display = "none";
+            gameCanvas.style.display = "block";
+            gameStats.style.display = "block";
+            gameCanvas.width = window.innerWidth;
+            gameCanvas.height = window.innerHeight;
+            bird.x = gameCanvas.width;
+            bird.y = Math.random() * (gameCanvas.height - bird.size);
+            timerInterval = setInterval(updateTimer, 1000);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                endGame();
+            }
+            document.getElementById("timer").innerText = `Time: ${timeLeft}`;
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            gameCanvas.style.display = "none";
+            gameStats.style.display = "none";
+            gameOverScreen.style.display = "block";
+            finalScore.innerText = `Final Score: ${score}`;
+            finalLevel.innerText = `Level: ${level}`;
+            earnedCoins.innerText = `Coins Earned: ${level * 50}`;
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            ctx.drawImage(backgroundImage, 0, 0, gameCanvas.width, gameCanvas.height);
+            ctx.drawImage(birdImage, bird.x, bird.y, bird.size, bird.size);
+
+            bird.x -= bird.speed;
+            if (bird.x < -bird.size) {
+                bird.x = gameCanvas.width;
+                bird.y = Math.random() * (gameCanvas.height - bird.size);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function shootBird(event) {
+            const rect = gameCanvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            if (
+                mouseX >= bird.x &&
+                mouseX <= bird.x + bird.size &&
+                mouseY >= bird.y &&
+                mouseY <= bird.y + bird.size
+            ) {
+                score++;
+                ammo--;
+                bird.x= gameCanvas.width;
+                bird.y = Math.random() * (gameCanvas.height - bird.size);
+            }
+
+            document.getElementById("score").innerText = `Score: ${score}`;
+            document.getElementById("ammo").innerText = `Ammo: ${ammo}`;
+
+            if (ammo === 0) {
+                endGame();
+            }
+        }
+
+        function nextLevel() {
+            level++;
+            score = 0;
+            ammo = 200;
+            timeLeft = 60;
+            gameOverScreen.style.display = "none";
+            gameCanvas.style.display = "block";
+            gameStats.style.display = "block";
+
+            bird.speed += 0.04;
+            bird.size = Math.max(30, bird.size - 2);
+
+            bird.x = gameCanvas.width;
+            bird.y = Math.random() * (gameCanvas.height - bird.size);
+            timerInterval = setInterval(updateTimer, 1000);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function goHome() {
+            gameOverScreen.style.display = "none";
+            playButton.style.display = "block";
+            score = 0;
+            ammo = 200;
+            level = 1;
+            timeLeft = 60;
+            bird.speed = 3;
+            bird.size = 50;
+        }
+
+        gameCanvas.addEventListener("click", shootBird);
+    </script>
+</body>
+</html>
